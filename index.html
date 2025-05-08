@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Управление клиентами</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    body { font-family: Arial, sans-serif; padding: 20px; background-color: #f4f4f4; }
+    h2 { color: #333; }
+    .form-group { margin-bottom: 15px; }
+    label { display: block; margin-bottom: 5px; font-weight: bold; }
+    input, select { width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px; }
+    button { padding: 10px; background-color: #0088cc; color: white; border: none; border-radius: 4px; cursor: pointer; width: 100%; }
+    button:hover { background-color: #006699; }
+    table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+    th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+    th { background-color: #0088cc; color: white; }
+    .error { color: red; }
+    .success { color: green; }
+  </style>
+</head>
+<body>
+  <h2>Управление клиентами</h2>
+  <div id="status"></div>
+
+  <h3>Добавить клиента</h3>
+  <div class="form-group">
+    <label for="add-name">Имя</label>
+    <input type="text" id="add-name" placeholder="Фрея Лопес">
+  </div>
+  <div class="form-group">
+    <label for="add-phone">Телефон</label>
+    <input type="text" id="add-phone" placeholder="+79153673031">
+  </div>
+  <div class="form-group">
+    <label for="add-devices">Устройства</label>
+    <select id="add-devices">
+      <option value="1">1</option>
+      <option value="2">2</option>
+      <option value="3">3</option>
+      <option value="4">4</option>
+      <option value="5">5</option>
+    </select>
+  </div>
+  <button onclick="addClient()">Добавить клиента</button>
+
+  <h3>Добавить оплату</h3>
+  <div class="form-group">
+    <label for="pay-name">Клиент</label>
+    <select id="pay-name">
+      <option value="">Выберите клиента</option>
+    </select>
+  </div>
+  <div class="form-group">
+    <label for="pay-amount">Сумма</label>
+    <input type="number" id="pay-amount" placeholder="300">
+  </div>
+  <div class="form-group">
+    <label for="pay-date">Дата (ДД.ММ.ГГГГ)</label>
+    <input type="text" id="pay-date" placeholder="06.05.2025">
+  </div>
+  <button onclick="addPayment()">Добавить оплату</button>
+
+  <h3>Список клиентов</h3>
+  <table id="client-table">
+    <thead>
+      <tr>
+        <th>Имя</th>
+        <th>Телефон</th>
+        <th>Устройства</th>
+        <th>Дата окончания</th>
+        <th>Действия</th>
+      </tr>
+    </thead>
+    <tbody></tbody>
+  </table>
+
+  <script>
+    const WEB_APP_URL = "https://script.google.com/macros/s/AKfycby3sH5E-m4nfVOKMp994Vxeu-H9qg2Sw4l2_pi-8B0Q3dnkUSViCGBWb1x9r6ynA-He/exec"; // Замените на ваш Google Apps Script URL
+
+    // Загрузка списка клиентов при открытии
+    window.onload = function() {
+      fetchClients();
+    };
+
+    function fetchClients() {
+      fetch(WEB_APP_URL, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "getclients" })
+      })
+      .then(response => response.json())
+      .then(data => {
+        if (data.success) {
+          populateClientTable(data.clients);
+          populateClientSelect(data.clients);
+        } else {
+          showStatus("Ошибка загрузки клиентов: " + data.error, false);
+        }
+      })
+      .catch(error => showStatus("Ошибка: " + error.message, false));
+    }
+
+    function populateClientTable(clients) {
+      const tbody = document.querySelector("#client-table tbody");
+      tbody.innerHTML = "";
+      clients.forEach(client => {
+        const row = document.createElement("tr");
+        row.innerHTML = `
+          <td>${client.name}</td>
+          <td>${client.phone}</td>
+          <td>${client.devices}</td>
+          <td>${client.endDate || '-'}</td>
+          <td><button onclick="deleteClient('${client.name}')">Удалить</button></td>
+        `;
+        tbody.appendChild(row);
+      });
+    }
+
+    function populateClientSelect(clients) {
+      const select = document.getElementById("pay-name");
+      select.innerHTML = '<option value="">Выберите клиента</option>';
+      clients.forEach(client => {
+        const option = document.createElement("option");
+        option.value = client.name;
+        option.textContent = client.name;
+        select.appendChild(option);
+      });
+    }
+
+    function addClient() {
+      const name = document.getElementById("add-name").value.trim();
+      const phone = document.getElementById("add-phone").value.trim();
+      const devices = parseInt(document.getElementById("add-devices").value);
+
+      if (!name || !phone.match(/^\+\d{10,15}$/) || isNaN(devices)) {
+        showStatus("Заполните все поля корректно. Телефон должен начинаться с +.", false);
+        return;
+      }
+
+      fetch(WEB_APP_URL, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "addclient", name, phone, devices })
+      })
+      .then(response => response.json())
+      .then(data => {
+        if (data.success) {
+          showStatus("Клиент добавлен: " + name, true);
+          fetchClients();
+        } else {
+          showStatus("Ошибка: " + data.error, false);
+        }
+      })
+      .catch(error => showStatus("Ошибка: " + error.message, false));
+    }
+
+    function addPayment() {
+      const name = document.getElementById("pay-name").value;
+      const amount = parseFloat(document.getElementById("pay-amount").value);
+      const date = document.getElementById("pay-date").value.trim();
+
+      if (!name || isNaN(amount) || amount <= 0 || !date.match(/^\d{2}\.\d{2}\.\d{4}$/)) {
+        showStatus("Заполните все поля корректно. Дата: ДД.ММ.ГГГГ.", false);
+        return;
+      }
+
+      fetch(WEB_APP_URL, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "pay", name, amount, date })
+      })
+      .then(response => response.json())
+      .then(data => {
+        if (data.success) {
+          showStatus("Оплата добавлена: " + name, true);
+          fetchClients();
+        } else {
+          showStatus("Ошибка: " + data.error, false);
+        }
+      })
+      .catch(error => showStatus("Ошибка: " + error.message, false));
+    }
+
+    function deleteClient(name) {
+      if (!confirm("Удалить клиента " + name + "?")) return;
+
+      fetch(WEB_APP_URL, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "deleteclient", name })
+      })
+      .then(response => response.json())
+      .then(data => {
+        if (data.success) {
+          showStatus("Клиент удалён: " + name, true);
+          fetchClients();
+        } else {
+          showStatus("Ошибка: " + data.error, false);
+        }
+      })
+      .catch(error => showStatus("Ошибка: " + error.message, false));
+    }
+
+    function showStatus(message, isSuccess) {
+      const statusDiv = document.getElementById("status");
+      statusDiv.textContent = message;
+      statusDiv.className = isSuccess ? "success" : "error";
+      setTimeout(() => statusDiv.textContent = "", 3000);
+    }
+  </script>
+</body>
+</html>
