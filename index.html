@@ -76,7 +76,7 @@
   </table>
 
   <script>
-    const WEB_APP_URL = "https://cors-proxy.statusdi.workers.dev/"; // Замените на ваш Google Apps Script URL
+    const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbzPvvbnocTha94s1JEH39slzIwB44FNuyTKRnO-XlYNJIHOw7EKhubmOTXn74stATkGdg/exec"; // Замените на ваш Google Apps Script URL
 
     // Загрузка списка клиентов при открытии
     window.onload = function() {
@@ -208,6 +208,9 @@
       statusDiv.className = isSuccess ? "success" : "error";
       setTimeout(() => statusDiv.textContent = "", 3000);
     }
-  </script>
+  </script src="https://telegram.org/js/telegram-web-app.js"></script>
+<script>
+    window.Telegram.webapp.ready();
+</script>
 </body>
 </html>
